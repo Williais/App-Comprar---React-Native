@@ -5,16 +5,17 @@ import {Input} from '@/components/Input'
 import {Filter} from '@/components/Filter'
 import { FilterStatus } from "@/types/FilterStatus"
 import { Item } from '@/components/Item'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {ItemStorage, itemsStorage} from '@/storage/ItemsStorage'
 
 const FILTER_STATUS: FilterStatus[] = [FilterStatus.PENDING, FilterStatus.DONE]
 
-export default function Home() {
+export default  function Home() {
   const [filter, setFilter] = useState(FilterStatus.PENDING)
   const [descricao, setDescricao] = useState("")
-  const [items, setItems] = useState<any>([])
+  const [items, setItems] = useState<ItemStorage[]>([])
 
-  function handleAdd(){
+  async function handleAdd(){
     if(!descricao.trim()){
       return Alert.alert("ADICIONAR", "Adicione a descrição do item")
     }
@@ -25,17 +26,69 @@ export default function Home() {
       status: FilterStatus.PENDING
     }
 
-    setItems((prev: any) => [...prev, newItem])
+    await itemsStorage.add(newItem)
+    await itemByStatus()
 
     setDescricao("")
+    setFilter(FilterStatus.PENDING)
   }
+
+  async function handleRemove(id: string) {
+    try{
+      await itemsStorage.remover(id)
+      await itemByStatus()
+
+    }catch(e){
+      Alert.alert("Error", "Erro ao remover o item")
+    }
+  }
+
+  async function itemByStatus() {
+    try{
+      const response = await itemsStorage.getByStatus(filter)
+      setItems(response)
+    }catch(e){
+      Alert.alert("Error", "Erro ao pegar os dados")
+    }
+  }
+
+  function handleClear(){
+    Alert.alert("Clear", "Dejesa Remover todos?", [
+      {text: "Não", style: "cancel"},
+      {text: "Sim", onPress: () => onClear()}
+
+    ])
+  }
+
+  async function onClear() {
+    try {
+      await itemsStorage.clear()
+      setItems([])
+    } catch (error) {
+      Alert.alert("Error", "Erro ao limpar os dados")
+    }
+  }
+
+  async function handleToggleItemStatus(id: string) {
+    try{
+      await itemsStorage.toggleUpdate(id)
+      await itemByStatus()
+    }catch(e){
+      console.log(e)
+      Alert.alert("Error", "Erro ao trocar o Status")
+    }
+  }
+
+  useEffect(() => {
+    itemByStatus()
+  }, [filter])
 
   return (
     <View style={style.container}>
       <Image source={require("@/assets/logo.png")} style={style.logo}/>
 
       <View style={style.form}>
-        <Input placeholder='Digite o Item' onChangeText={setDescricao}/>
+        <Input placeholder='Digite o Item' onChangeText={setDescricao} value={descricao}/>
         <Button title="Adicionar" onPress={handleAdd}/>
       </View>
 
@@ -55,7 +108,7 @@ export default function Home() {
         }
 
           <TouchableOpacity style={style.btnLimpar}>
-            <Text style={style.textLimpar} onPress={() => setItems([])}>Limpar</Text>
+            <Text style={style.textLimpar} onPress={() => handleClear}>Limpar</Text>
           </TouchableOpacity>
         </View>
 
@@ -65,8 +118,8 @@ export default function Home() {
           renderItem={({item}) =>
             <Item 
               data={item}
-              onRemove={() => console.log("Removido")}
-              onStatus={() => console.log("Status")}
+              onRemove={() => handleRemove(item.id)}
+              onStatus={() => handleToggleItemStatus(item.id)}
             />
           }
           showsVerticalScrollIndicator={false}
