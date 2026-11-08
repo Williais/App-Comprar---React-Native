@@ -1,33 +1,42 @@
-import { View, Image, TouchableOpacity, Text, FlatList, ScrollView } from 'react-native';
-import { style } from './Style';
-import {Button} from '@/components/Button';
-import {Input} from '@/components/Input';
-import {Filter} from '@/components/Filter';
-import { FilterStatus } from "@/types/FilterStatus";
-import { Item } from '@/components/Item';
+import { View, Image, TouchableOpacity, Text, FlatList, ScrollView, Alert } from 'react-native'
+import { style } from './Style'
+import {Button} from '@/components/Button'
+import {Input} from '@/components/Input'
+import {Filter} from '@/components/Filter'
+import { FilterStatus } from "@/types/FilterStatus"
+import { Item } from '@/components/Item'
+import { useState } from 'react'
 
 const FILTER_STATUS: FilterStatus[] = [FilterStatus.PENDING, FilterStatus.DONE]
-const ITENS = [
-  { id: "1", status: FilterStatus.DONE, descricao: "1 pacote de café" },
-  { id: "2", status: FilterStatus.PENDING, descricao: "2 litros de leite" },
-  { id: "3", status: FilterStatus.PENDING, descricao: "1 kg de arroz" },
-  { id: "4", status: FilterStatus.DONE, descricao: "1 kg de feijão preto" },
-  { id: "5", status: FilterStatus.PENDING, descricao: "1 dúzia de ovos" },
-  { id: "6", status: FilterStatus.DONE, descricao: "1 garrafa de azeite de oliva" },
-  { id: "7", status: FilterStatus.PENDING, descricao: "500g de queijo mussarela" },
-  { id: "8", status: FilterStatus.PENDING, descricao: "1 pacote de pão de forma" },
-  { id: "9", status: FilterStatus.DONE, descricao: "3 maçãs vermelhas" },
-  { id: "10", status: FilterStatus.PENDING, descricao: "1 pasta de dente" }
-]
 
 export default function Home() {
+  const [filter, setFilter] = useState(FilterStatus.PENDING)
+  const [descricao, setDescricao] = useState("")
+  const [items, setItems] = useState<any>([])
+
+  function handleAdd(){
+    if(!descricao.trim()){
+      return Alert.alert("ADICIONAR", "Adicione a descrição do item")
+    }
+
+    const newItem = {
+      id: Math.random().toString(36).substring(2),
+      descricao,
+      status: FilterStatus.PENDING
+    }
+
+    setItems((prev: any) => [...prev, newItem])
+
+    setDescricao("")
+  }
+
   return (
     <View style={style.container}>
       <Image source={require("@/assets/logo.png")} style={style.logo}/>
 
       <View style={style.form}>
-        <Input placeholder='Digite o Item'/>
-        <Button title="Adicionar"/>
+        <Input placeholder='Digite o Item' onChangeText={setDescricao}/>
+        <Button title="Adicionar" onPress={handleAdd}/>
       </View>
 
       <View style={style.content}>
@@ -36,17 +45,22 @@ export default function Home() {
         {
           FILTER_STATUS.map((status) => (
             
-            <Filter key={status} status={status} isActive/>
+            <Filter 
+            key={status} 
+            status={status} 
+            isActive={status === filter}
+            onPress={() => setFilter(status)}
+            />
           ))
         }
 
           <TouchableOpacity style={style.btnLimpar}>
-            <Text style={style.textLimpar}>Limpar</Text>
+            <Text style={style.textLimpar} onPress={() => setItems([])}>Limpar</Text>
           </TouchableOpacity>
         </View>
 
         <FlatList
-          data={ITENS}
+          data={items}
           keyExtractor={(item) => item.id}
           renderItem={({item}) =>
             <Item 
